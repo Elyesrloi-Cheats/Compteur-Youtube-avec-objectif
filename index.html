@@ -24,6 +24,7 @@
             text-align: center;
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
             width: 380px;
+            position: relative;
         }
 
         .channel-handle {
@@ -37,6 +38,7 @@
             font-weight: bold;
             color: #ff0000;
             margin-bottom: 25px;
+            min-height: 58px;
         }
 
         .progress-container {
@@ -53,7 +55,7 @@
             font-weight: 600;
         }
 
-        /* Barre de progression avec contours noirs et fond sombre */
+        /* Barre de progression avec contours noirs */
         .progress-bar-outer {
             width: 100%;
             height: 24px;
@@ -69,17 +71,17 @@
             height: 100%;
             background-color: #ff9800;
             width: 0%;
-            transition: width 0.5s ease-in-out;
+            transition: width 0.1s linear;
         }
 
-        /* Conteneur pour la flèche et le pourcentage sous la barre */
+        /* Conteneur pour la flèche et le pourcentage */
         .indicator-wrapper {
             position: relative;
             height: 45px;
             margin-top: 2px;
         }
 
-        /* Flèche orange (triangle pointant vers le haut) */
+        /* Triangle orange pointant vers le haut */
         .arrow-indicator {
             position: absolute;
             left: 0%;
@@ -89,10 +91,10 @@
             border-left: 7px solid transparent;
             border-right: 7px solid transparent;
             border-bottom: 10px solid #ff9800;
-            transition: left 0.5s ease-in-out;
+            transition: left 0.1s linear;
         }
 
-        /* Texte du pourcentage juste en dessous de la flèche */
+        /* Pourcentage sous la flèche */
         .percentage-text {
             position: absolute;
             left: 0%;
@@ -101,41 +103,61 @@
             font-size: 0.9rem;
             font-weight: bold;
             color: #ff9800;
-            transition: left 0.5s ease-in-out;
+            transition: left 0.1s linear;
             white-space: nowrap;
         }
 
-        /* Panneau de configuration (pour ajuster facilement si besoin) */
-        .config-box {
-            margin-top: 25px;
-            border-top: 1px solid #333;
-            padding-top: 15px;
-            font-size: 0.8rem;
-            color: #777;
-        }
-
-        .config-box input {
-            background: #2a2a2a;
+        /* Bouton Admin */
+        .btn-admin-access {
+            background: transparent;
             border: 1px solid #444;
-            color: #fff;
-            padding: 5px 8px;
-            border-radius: 4px;
-            width: 80px;
-            text-align: center;
+            color: #888;
+            padding: 5px 12px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            cursor: pointer;
+            margin-top: 25px;
+            transition: 0.2s;
         }
 
-        .config-box button {
+        .btn-admin-access:hover {
+            color: #fff;
+            border-color: #777;
+        }
+
+        /* Zone réservée à l'administrateur (masquée au départ) */
+        .admin-panel {
+            display: none;
+            margin-top: 15px;
+            border-top: 1px dashed #444;
+            padding-top: 15px;
+            font-size: 0.85rem;
+            color: #aaa;
+        }
+
+        .admin-panel input {
+            background: #2a2a2a;
+            border: 1px solid #555;
+            color: #fff;
+            padding: 6px 10px;
+            border-radius: 4px;
+            width: 100px;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        .admin-panel button {
             background: #ff9800;
             border: none;
             color: #000;
             font-weight: bold;
-            padding: 6px 12px;
+            padding: 6px 14px;
             border-radius: 4px;
             cursor: pointer;
             margin-left: 5px;
         }
 
-        .config-box button:hover {
+        .admin-panel button:hover {
             background: #e68900;
         }
     </style>
@@ -144,7 +166,7 @@
 
     <div class="card">
         <div class="channel-handle">@Elyesrloi_officiel</div>
-        <div id="sub-count" class="subscriber-count">...</div>
+        <div id="sub-count" class="subscriber-count">0</div>
 
         <div class="progress-container">
             <div class="progress-labels">
@@ -157,49 +179,95 @@
                 <div id="progress-fill" class="progress-bar-inner"></div>
             </div>
 
-            <!-- Flèche et pourcentage en dessous -->
+            <!-- Flèche & Pourcentage -->
             <div class="indicator-wrapper">
                 <div id="arrow" class="arrow-indicator"></div>
                 <div id="percentage" class="percentage-text">0.0%</div>
             </div>
         </div>
 
-        <!-- Panneau de réglage direct (pratique pour un vrai suivi sans blocage YouTube) -->
-        <div class="config-box">
-            <span>Ajuster abonnés :</span>
-            <input type="number" id="manual-subs" value="1200" min="0" max="2500">
-            <button onclick="updateStats()">Valider</button>
+        <!-- Bouton Admin -->
+        <button class="btn-admin-access" onclick="requestAdminAccess()">🔒 Admin</button>
+
+        <!-- Formulaire réservé à l'Admin -->
+        <div id="admin-panel" class="admin-panel">
+            <label for="new-subs-input">Nouveau nombre :</label><br><br>
+            <input type="number" id="new-subs-input" value="1200" min="0">
+            <button onclick="saveNewCount()">Sauvegarder</button>
         </div>
     </div>
 
     <script>
         const GOOGLE_TARGET = 2500;
+        const SECRET_CODE = "EnekoSecret2307";
 
-        function updateStats() {
-            // Récupère la valeur entrée (par défaut 1200 d'après votre vérification)
-            const subs = parseInt(document.getElementById('manual-subs').value) || 0;
-            
-            // Affichage du nombre d'abonnés formaté
-            document.getElementById('sub-count').innerText = subs.toLocaleString('fr-FR');
+        let currentSubscribers = 0;
+        let animationTimer = null;
 
-            // Calcul du pourcentage (bloqué entre 0% et 100%)
-            let percent = (subs / GOOGLE_TARGET) * 100;
+        // 1. Fonction pour demander le mot de passe Admin
+        function requestAdminAccess() {
+            const codeInput = prompt("Veuillez saisir le code administrateur :");
+            if (codeInput === SECRET_CODE) {
+                document.getElementById('admin-panel').style.display = 'block';
+                alert("Accès Admin autorisé.");
+            } else if (codeInput !== null) {
+                alert("Code incorrect ! Accès refusé.");
+            }
+        }
+
+        // 2. Fonction de mise à jour visuelle des éléments (Compteur, Barre, Flèche, %)
+        function renderUI(value) {
+            // Affichage des chiffres formatés
+            document.getElementById('sub-count').innerText = Math.floor(value).toLocaleString('fr-FR');
+
+            // Calcul du pourcentage
+            let percent = (value / GOOGLE_TARGET) * 100;
             if (percent > 100) percent = 100;
             if (percent < 0) percent = 0;
 
             const percentFormatted = percent.toFixed(1) + '%';
 
-            // Mise à jour de la barre orange
+            // Mise à jour de la barre orange et de la flèche
             document.getElementById('progress-fill').style.width = percentFormatted;
-
-            // Déplacement de la flèche et du pourcentage
             document.getElementById('arrow').style.left = percentFormatted;
             document.getElementById('percentage').style.left = percentFormatted;
             document.getElementById('percentage').innerText = percentFormatted;
         }
 
-        // Lancement initial au chargement de la page
-        updateStats();
+        // 3. Animation de défilement des chiffres
+        function animateTo(targetValue) {
+            if (animationTimer) clearInterval(animationTimer);
+
+            const startValue = currentSubscribers;
+            const difference = targetValue - startValue;
+            const duration = 1500; // Durée de l'animation en ms (1.5s)
+            const steps = 60; // 60 étapes d'animation
+            const increment = difference / steps;
+            const stepTime = duration / steps;
+            let currentStep = 0;
+
+            animationTimer = setInterval(() => {
+                currentStep++;
+                currentSubscribers += increment;
+
+                if (currentStep >= steps) {
+                    currentSubscribers = targetValue;
+                    renderUI(currentSubscribers);
+                    clearInterval(animationTimer);
+                } else {
+                    renderUI(currentSubscribers);
+                }
+            }, stepTime);
+        }
+
+        // 4. Action appelée par l'Admin au clic sur "Sauvegarder"
+        function saveNewCount() {
+            const target = parseInt(document.getElementById('new-subs-input').value) || 0;
+            animateTo(target);
+        }
+
+        // Lancement initial (chargement avec 1 200 abonnés au départ)
+        animateTo(1200);
     </script>
 
 </body>
