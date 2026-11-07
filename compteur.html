@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Compteur d'abonnés YouTube en direct</title>
+    <title>Compteur & Objectif Abonnés YouTube</title>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -16,98 +16,190 @@
             margin: 0;
         }
 
-        .youtube-card {
+        .card {
             background: #1e1e1e;
-            border: 1px solid #333;
-            padding: 30px 40px;
-            border-radius: 16px;
+            border: 2px solid #333;
+            padding: 35px 30px;
+            border-radius: 20px;
             text-align: center;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
-            max-width: 320px;
-            width: 100%;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+            width: 380px;
         }
 
-        .youtube-card h3 {
-            margin: 0 0 15px 0;
-            font-size: 1.1rem;
+        .channel-handle {
+            font-size: 1rem;
             color: #aaa;
-            font-weight: 500;
+            margin-bottom: 10px;
         }
 
         .subscriber-count {
-            font-size: 2.8rem;
+            font-size: 3rem;
             font-weight: bold;
             color: #ff0000;
-            margin-bottom: 5px;
-            letter-spacing: 1px;
+            margin-bottom: 25px;
         }
 
-        .label {
+        .progress-container {
+            margin-top: 20px;
+            text-align: left;
+        }
+
+        .progress-labels {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.85rem;
+            color: #bbb;
+            margin-bottom: 6px;
+            font-weight: 600;
+        }
+
+        /* Barre de progression avec contours noirs et fond sombre */
+        .progress-bar-outer {
+            width: 100%;
+            height: 24px;
+            background-color: #2a2a2a;
+            border: 3.5px solid #000000;
+            border-radius: 6px;
+            overflow: hidden;
+            box-sizing: border-box;
+        }
+
+        /* Remplissage orange */
+        .progress-bar-inner {
+            height: 100%;
+            background-color: #ff9800;
+            width: 0%;
+            transition: width 0.5s ease-in-out;
+        }
+
+        /* Conteneur pour la flèche et le pourcentage sous la barre */
+        .indicator-wrapper {
+            position: relative;
+            height: 45px;
+            margin-top: 2px;
+        }
+
+        /* Flèche orange (triangle pointant vers le haut) */
+        .arrow-indicator {
+            position: absolute;
+            left: 0%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 7px solid transparent;
+            border-right: 7px solid transparent;
+            border-bottom: 10px solid #ff9800;
+            transition: left 0.5s ease-in-out;
+        }
+
+        /* Texte du pourcentage juste en dessous de la flèche */
+        .percentage-text {
+            position: absolute;
+            left: 0%;
+            transform: translateX(-50%);
+            top: 13px;
             font-size: 0.9rem;
+            font-weight: bold;
+            color: #ff9800;
+            transition: left 0.5s ease-in-out;
+            white-space: nowrap;
+        }
+
+        /* Panneau de configuration (pour ajuster facilement si besoin) */
+        .config-box {
+            margin-top: 25px;
+            border-top: 1px solid #333;
+            padding-top: 15px;
+            font-size: 0.8rem;
             color: #777;
-            text-transform: uppercase;
-            letter-spacing: 2px;
         }
 
-        .live-dot {
-            display: inline-block;
-            width: 8px;
-            height: 8px;
-            background-color: #2ecc71;
-            border-radius: 50%;
-            margin-right: 5px;
-            box-shadow: 0 0 8px #2ecc71;
-            animation: pulse 1.5s infinite;
+        .config-box input {
+            background: #2a2a2a;
+            border: 1px solid #444;
+            color: #fff;
+            padding: 5px 8px;
+            border-radius: 4px;
+            width: 80px;
+            text-align: center;
         }
 
-        @keyframes pulse {
-            0% { transform: scale(0.95); opacity: 0.8; }
-            50% { transform: scale(1.2); opacity: 1; }
-            100% { transform: scale(0.95); opacity: 0.8; }
+        .config-box button {
+            background: #ff9800;
+            border: none;
+            color: #000;
+            font-weight: bold;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-left: 5px;
+        }
+
+        .config-box button:hover {
+            background: #e68900;
         }
     </style>
 </head>
 <body>
 
-    <div class="youtube-card">
-        <h3><span class="live-dot"></span>Abonnés en direct</h3>
-        <div id="subs" class="subscriber-count">...</div>
-        <div class="label">Abonnés</div>
+    <div class="card">
+        <div class="channel-handle">@Elyesrloi_officiel</div>
+        <div id="sub-count" class="subscriber-count">...</div>
+
+        <div class="progress-container">
+            <div class="progress-labels">
+                <span>Actuel</span>
+                <span>Objectif : 2 500</span>
+            </div>
+            
+            <!-- Barre de progression -->
+            <div class="progress-bar-outer">
+                <div id="progress-fill" class="progress-bar-inner"></div>
+            </div>
+
+            <!-- Flèche et pourcentage en dessous -->
+            <div class="indicator-wrapper">
+                <div id="arrow" class="arrow-indicator"></div>
+                <div id="percentage" class="percentage-text">0.0%</div>
+            </div>
+        </div>
+
+        <!-- Panneau de réglage direct (pratique pour un vrai suivi sans blocage YouTube) -->
+        <div class="config-box">
+            <span>Ajuster abonnés :</span>
+            <input type="number" id="manual-subs" value="1200" min="0" max="2500">
+            <button onclick="updateStats()">Valider</button>
+        </div>
     </div>
 
     <script>
-        const CHANNEL_ID = 'UCfX-1RkxzeTxS6Mxajn7W7Q'; 
-        
-        async function getSubscribers() {
-            try {
-                // Utilisation d'un proxy pour cibler directement la page de la chaîne via son ID
-                const targetUrl = `https://www.youtube.com/channel/${CHANNEL_ID}`;
-                const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`;
-                
-                const response = await fetch(proxyUrl);
-                const data = await response.json();
-                
-                // Recherche de la donnée d'abonnés dans le code source de la page YouTube
-                const match = data.contents.match(/"subscriberCountText":\{"accessibility":\{"accessibilityData":\{"label":"([^"]+)"/);
-                
-                if (match && match[1]) {
-                    // Extrait le texte (ex: "123 subscribers" -> "123")
-                    const subText = match[1].replace('subscribers', '').replace('abonné·e·s', '').replace('abonnés', '').trim();
-                    document.getElementById('subs').innerText = subText;
-                } else {
-                    document.getElementById('subs').innerText = "Indisponible";
-                }
-            } catch (err) {
-                console.error(err);
-                document.getElementById('subs').innerText = "Erreur";
-            }
+        const GOOGLE_TARGET = 2500;
+
+        function updateStats() {
+            // Récupère la valeur entrée (par défaut 1200 d'après votre vérification)
+            const subs = parseInt(document.getElementById('manual-subs').value) || 0;
+            
+            // Affichage du nombre d'abonnés formaté
+            document.getElementById('sub-count').innerText = subs.toLocaleString('fr-FR');
+
+            // Calcul du pourcentage (bloqué entre 0% et 100%)
+            let percent = (subs / GOOGLE_TARGET) * 100;
+            if (percent > 100) percent = 100;
+            if (percent < 0) percent = 0;
+
+            const percentFormatted = percent.toFixed(1) + '%';
+
+            // Mise à jour de la barre orange
+            document.getElementById('progress-fill').style.width = percentFormatted;
+
+            // Déplacement de la flèche et du pourcentage
+            document.getElementById('arrow').style.left = percentFormatted;
+            document.getElementById('percentage').style.left = percentFormatted;
+            document.getElementById('percentage').innerText = percentFormatted;
         }
 
-        // Charger au démarrage de la page
-        getSubscribers();
-
-        // Actualiser automatiquement toutes les 60 secondes
-        setInterval(getSubscribers, 60000);
+        // Lancement initial au chargement de la page
+        updateStats();
     </script>
 
 </body>
